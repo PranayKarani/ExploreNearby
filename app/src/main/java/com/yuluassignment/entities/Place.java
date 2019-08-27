@@ -1,11 +1,18 @@
 package com.yuluassignment.entities;
 
+import androidx.annotation.NonNull;
+
 public class Place {
 
-    int id;
-    String name;
-    String categoryName;
-    double lat, lng;
-    String fullAddress;
+    public String id;
+    public String name;
+    public String categoryName;
+    public double lat, lng;
+    public String shortAddress, fullAddress;
 
+    @NonNull
+    @Override
+    public String toString() {
+        return name + " [" + shortAddress + "]";
+    }
 }

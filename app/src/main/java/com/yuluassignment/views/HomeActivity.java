@@ -1,16 +1,12 @@
 package com.yuluassignment.views;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentActivity;
 import android.os.Bundle;
-
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+import android.util.Log;
+import androidx.appcompat.app.AppCompatActivity;
+import com.yuluassignment.C;
 import com.yuluassignment.R;
+import com.yuluassignment.entities.Place;
+import com.yuluassignment.repos.PlacesRepo;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -19,6 +15,14 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+        PlacesRepo.get().getPlacesFor("coffee", places -> {
+
+            for (Place place : places) {
+                Log.i(C.TAG, place.toString());
+            }
+
+        });
 
     }
 
