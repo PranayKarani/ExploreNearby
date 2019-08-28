@@ -1,6 +1,7 @@
 package com.yuluassignment.viewmodels;
 
 import android.util.Log;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.yuluassignment.C;
@@ -26,7 +27,7 @@ public class PlacesViewModel extends ViewModel {
 
     }
 
-    public MutableLiveData<List<Place>> getPlacesData() {
+    public LiveData<List<Place>> getPlacesData() {
         return placesData;
     }
 
