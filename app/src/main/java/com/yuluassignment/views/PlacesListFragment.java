@@ -55,11 +55,10 @@ public class PlacesListFragment extends Fragment implements HomeActivity.SearchC
 
             adapter.setPlaces(places);
 
-            if (HomeActivity.showingMapView) {
-                return;
-            }
             if (places.isEmpty()) {
-                Toast.makeText(getContext(), "No places found :(", Toast.LENGTH_SHORT).show();
+                if (!HomeActivity.showingMapView) {
+                    Toast.makeText(getContext(), "No places found :(", Toast.LENGTH_SHORT).show();
+                }
                 b.img.setVisibility(View.VISIBLE);
             } else {
                 b.img.setVisibility(View.GONE);
