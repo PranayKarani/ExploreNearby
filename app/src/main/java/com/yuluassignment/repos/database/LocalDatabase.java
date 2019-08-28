@@ -64,4 +64,19 @@ public abstract class LocalDatabase extends RoomDatabase {
 
     }
 
+    @SuppressLint("StaticFieldLeak")
+    public void clearDatabase() {
+
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                Log.d(C.TAG, "deleting database...");
+                db.placesDao().deleteAll();
+                return null;
+            }
+        }.execute();
+
+    }
+
+
 }

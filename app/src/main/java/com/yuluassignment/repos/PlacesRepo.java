@@ -4,7 +4,8 @@ import android.util.Log;
 import com.yuluassignment.C;
 import com.yuluassignment.entities.Place;
 import com.yuluassignment.misc.NetworkManager;
-import com.yuluassignment.misc.Settings;
+import com.yuluassignment.misc.Prefs;
+import com.yuluassignment.misc.SharedPrefs;
 import com.yuluassignment.repos.database.LocalDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,17 +38,19 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     public void getPlacesFor(String query, PlacesFetchListener listener) {
 
         this.listener = listener;
-        if (!nm.connectedToInternet() || Settings.offline) {
+        if (!nm.connectedToInternet() || Prefs.offline) {
             db.findPlacesByName(query, listener);
         } else {
-            nm.makeGETRequest(getRequestUrl(query), this);
+            String url = getRequestUrl(query);
+            Log.i(C.TAG, "url: " + url);
+            nm.makeGETRequest(url, this);
         }
 
     }
 
     public void clearLocalData() {
 
-        // TODO clear local database
+        db.clearDatabase();
 
     }
 
@@ -128,6 +131,14 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     private String getRequestUrl(String query) {
 
         StringBuilder builder = new StringBuilder();
+        float         lat     = SharedPrefs.get(C.sp_last_lat);
+        float         lng     = SharedPrefs.get(C.sp_last_long);
+        String        location;
+        if (lat == -1 || lng == -1) {
+            location = "near=bangalore";
+        } else {
+            location = "ll=" + lat + "," + lng;
+        }
 
         builder.append(C.API_SEARCH)
                 .append("client_id=").append(C.FS_CLIENT_ID).append("&")
@@ -135,10 +146,10 @@ public class PlacesRepo implements NetworkManager.RequestListener {
                 .append("v=20191231&")
                 .append("limit=20&")
                 .append("intent=checkin&")
-                .append("near=bangalore&");
+                .append(location);
 
         if (query != null) {
-            builder.append("query=").append(query);
+            builder.append("&query=").append(query);
         }
 
         return builder.toString();

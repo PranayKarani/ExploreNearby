@@ -6,41 +6,45 @@ import com.yuluassignment.MyApp;
 
 public class SharedPrefs {
 
-    public static void writeData(String key, String data) {
+    public static void put(String key, String data) {
 
         getSharePrefs().edit().putString(key, data).commit();
 
     }
 
-    public static void writeData(String key, long data) {
+    public static void put(String key, long data) {
 
         getSharePrefs().edit().putLong(key, data).commit();
 
     }
 
-    public static void writeData(String key, int data) {
-        getSharePrefs().edit().putInt(key, data).apply();
+    public static void put(String key, float data) {
+        getSharePrefs().edit().putFloat(key, data).apply();
     }
 
-    public static void writeData(String key, boolean data) {
+    public static void put(String key, boolean data) {
         getSharePrefs().edit().putBoolean(key, data).apply();
     }
 
-    public static String readData(String key, String def) {
+    public static String get(String key, String def) {
 
         return getSharePrefs().getString(key, def);
 
     }
 
-    public static int readData(String key, int def) {
-        return getSharePrefs().getInt(key, def);
+    public static float get(String key) {
+        return get(key, -1f);
     }
 
-    public static boolean readData(String key, boolean def) {
+    public static float get(String key, float def) {
+        return getSharePrefs().getFloat(key, def);
+    }
+
+    public static boolean get(String key, boolean def) {
         return getSharePrefs().getBoolean(key, def);
     }
 
-    public static long readLongData(String key, long def) {
+    public static long getLong(String key, long def) {
         return getSharePrefs().getLong(key, def);
     }
 

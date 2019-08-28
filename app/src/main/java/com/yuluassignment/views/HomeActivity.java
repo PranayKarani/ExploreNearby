@@ -1,29 +1,48 @@
 package com.yuluassignment.views;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProviders;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.*;
+import com.google.android.gms.tasks.Task;
+import com.yuluassignment.C;
 import com.yuluassignment.R;
 import com.yuluassignment.databinding.ActivityHomeBinding;
-import com.yuluassignment.misc.Settings;
+import com.yuluassignment.entities.SimpleLocation;
+import com.yuluassignment.misc.Prefs;
 import com.yuluassignment.misc.SharedPrefs;
 import com.yuluassignment.viewmodels.PlacesViewModel;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.yuluassignment.C.*;
+
 public class HomeActivity extends AppCompatActivity {
 
-    final String sp_offline_only  = "offline";
-    final String sp_open_map_view = "mapView";
+    private static final int MY_PERMISSIONS_REQUEST_LOCATION = 12;
+    private static final int REQUEST_CHECK_SETTINGS          = 43;
 
     private ActivityHomeBinding b;
     private PlacesViewModel     viewModel;
@@ -31,28 +50,45 @@ public class HomeActivity extends AppCompatActivity {
     private PlacesListFragment listFragment;
     private MapViewFragment    mapViewFragment;
 
+    private SimpleLocation             location;
+    private Set<LocationFetchListener> locationFetchListeners;
+    private Set<SearchCloseListener>   searchCloseListeners;
+
     private boolean showingMapView = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         updateStatusBar(android.R.color.white);
+
+        locationFetchListeners = new HashSet<>();
+        searchCloseListeners = new HashSet<>();
+        loadSettings();
+
         b = DataBindingUtil.setContentView(this, R.layout.activity_home);
         setSupportActionBar(b.toolbar);
-        b.toolbar.setTitle(null);
         getSupportActionBar().setTitle("Search a place");
-        loadSettings();
+        b.toolbar.setTitle(null);
 
         viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
 
         listFragment = new PlacesListFragment();
         mapViewFragment = new MapViewFragment();
 
-        if (Settings.mapView) {
+        getSupportFragmentManager().beginTransaction().add(R.id.list_fragment_container, listFragment).commit();
+        getSupportFragmentManager().beginTransaction().add(R.id.map_fragment_container, mapViewFragment).commit();
+
+        locationFetchListeners.add(mapViewFragment);
+        searchCloseListeners.add(mapViewFragment);
+
+        if (Prefs.mapView) {
             showMap();
         } else {
             showList();
         }
+
+        // check this if no location found
+        checkForLocationPersmission();
 
     }
 
@@ -68,13 +104,15 @@ public class HomeActivity extends AppCompatActivity {
 
     private void showMap() {
         showingMapView = true;
-        showFragment(mapViewFragment);
+        b.listFragmentContainer.setVisibility(View.GONE);
+        b.mapFragmentContainer.setVisibility(View.VISIBLE);
         b.viewToggleBtn.setImageDrawable(getResources().getDrawable(R.drawable.list_icon));
     }
 
     private void showList() {
         showingMapView = false;
-        showFragment(listFragment);
+        b.listFragmentContainer.setVisibility(View.VISIBLE);
+        b.mapFragmentContainer.setVisibility(View.GONE);
         b.viewToggleBtn.setImageDrawable(getResources().getDrawable(R.drawable.map_icon));
     }
 
@@ -82,10 +120,24 @@ public class HomeActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.toolbar_menu, menu);
 
-        MenuItem   mSearch     = menu.findItem(R.id.action_search);
-        SearchView mSearchView = (SearchView) mSearch.getActionView();
-        mSearchView.setQueryHint("what do you want to search for?");
-        mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                for (SearchCloseListener sl : searchCloseListeners) {
+                    sl.onSearchClose();
+                }
+                return true;
+            }
+        });
+        SearchView sv = (SearchView) searchItem.getActionView();
+        sv.setQueryHint("what do you want to search for?");
+        sv.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 hideKeyboard(b.getRoot());
@@ -100,8 +152,8 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        menu.findItem(R.id.offline).setChecked(Settings.offline);
-        menu.findItem(R.id.map_view).setChecked(Settings.mapView);
+        menu.findItem(R.id.offline).setChecked(Prefs.offline);
+        menu.findItem(R.id.map_view).setChecked(Prefs.mapView);
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -113,30 +165,23 @@ public class HomeActivity extends AppCompatActivity {
                 viewModel.clearData();
                 return true;
             case R.id.offline:
-                Settings.offline = !Settings.offline;
-                item.setChecked(Settings.offline);
-                SharedPrefs.writeData(sp_offline_only, Settings.offline);
+                Prefs.offline = !Prefs.offline;
+                item.setChecked(Prefs.offline);
+                SharedPrefs.put(C.sp_offline_only, Prefs.offline);
                 return true;
             case R.id.map_view:
-                Settings.mapView = !Settings.mapView;
-                item.setChecked(Settings.mapView);
-                SharedPrefs.writeData(sp_open_map_view, Settings.mapView);
+                Prefs.mapView = !Prefs.mapView;
+                item.setChecked(Prefs.mapView);
+                SharedPrefs.put(sp_open_map_view, Prefs.mapView);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-    private void showFragment(Fragment fragment) {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit();
-    }
-
     private void loadSettings() {
-        Settings.offline = SharedPrefs.readData(sp_offline_only, true);
-        Settings.mapView = SharedPrefs.readData(sp_open_map_view, false);
+        Prefs.offline = SharedPrefs.get(sp_offline_only, true);
+        Prefs.mapView = SharedPrefs.get(sp_open_map_view, false);
     }
 
     private void updateStatusBar(int color) {
@@ -157,5 +202,165 @@ public class HomeActivity extends AppCompatActivity {
         }
 
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
+
+            if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+
+                showAlert(false, "Location permission is required to detect nearby places.", (dialog, which) -> {
+
+                    checkForLocationPersmission();
+
+                });
+
+            }
+
+        }
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CHECK_SETTINGS) {
+            switch (resultCode) {
+                case Activity.RESULT_OK:
+                    getUserLocation();
+                    break;
+                case Activity.RESULT_CANCELED:
+                    checkForLocationSettings();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void checkForLocationPersmission() {
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_REQUEST_LOCATION);
+
+        } else {
+
+            checkForLocationSettings();
+
+        }
+
+    }
+
+    private LocationRequest getLocationRequest() {
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setInterval(10000);
+        locationRequest.setFastestInterval(5000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        return locationRequest;
+    }
+
+    /**
+     * Checks for location setting. If on, call getUserLocation else shows a turn on location dialog
+     */
+    private void checkForLocationSettings() {
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(getLocationRequest());
+        Task<LocationSettingsResponse>  task    = LocationServices.getSettingsClient(this).checkLocationSettings(builder.build());
+        task.addOnSuccessListener(this, locationSettingsResponse -> {
+            getUserLocation();
+        });
+        task.addOnFailureListener(this, e -> {
+            if (e instanceof ResolvableApiException) {
+                try {
+                    ResolvableApiException resolvable = (ResolvableApiException) e;
+                    resolvable.startResolutionForResult(this, REQUEST_CHECK_SETTINGS);
+                } catch (IntentSender.SendIntentException ignore) {
+                }
+            }
+        });
+
+    }
+
+    /**
+     * Gets user location and informs listeners.
+     * If location could not be accessed get the last saved location
+     */
+    private void getUserLocation() {
+
+        final FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
+        client.getLastLocation().addOnSuccessListener(location -> {
+
+            if (location != null) {
+                informLocationListeners(SimpleLocation.fromLocation(location));
+            } else {
+                client.requestLocationUpdates(getLocationRequest(), new LocationCallback() {
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        if (locationResult != null) {
+                            informLocationListeners(SimpleLocation.fromLocation(locationResult.getLastLocation()));
+                        } else {
+
+                            SimpleLocation lastLocation = checkForLastSavedLocation();
+                            if (lastLocation != null) {
+                                informLocationListeners(lastLocation);
+                            }
+
+                        }
+                    }
+                }, null);
+
+            }
+
+        }).addOnFailureListener(e -> {
+            Log.e(C.TAG, e.getMessage());
+        });
+    }
+
+    private SimpleLocation checkForLastSavedLocation() {
+
+        float lat = SharedPrefs.get(sp_last_lat);
+        float lng = SharedPrefs.get(sp_last_long);
+
+        if (lat != -1 && lng != -1) {
+            return new SimpleLocation(lat, lng);
+        } else {
+            return null;
+        }
+
+    }
+
+    // saves and
+    private void informLocationListeners(SimpleLocation location) {
+        this.location = location;
+        SharedPrefs.put(sp_last_lat, location.lat);
+        SharedPrefs.put(sp_last_long, location.lng);
+        for (LocationFetchListener listener : locationFetchListeners) {
+            listener.locationFetched(location);
+        }
+    }
+
+    private void showAlert(final boolean cancelable, final String message, final DialogInterface.OnClickListener clickListener) {
+
+        new AlertDialog.Builder(this)
+                .setMessage(message)
+                .setPositiveButton("OK", clickListener)
+                .setCancelable(cancelable)
+                .create()
+                .show();
+
+    }
+
+    public interface LocationFetchListener {
+        void locationFetched(SimpleLocation location);
+    }
+
+    public interface SearchCloseListener {
+        void onSearchClose();
+    }
+
+
 
 }
