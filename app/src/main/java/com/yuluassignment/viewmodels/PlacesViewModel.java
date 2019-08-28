@@ -27,6 +27,12 @@ public class PlacesViewModel extends ViewModel {
 
     }
 
+    public void clearData() {
+
+        PlacesRepo.get().clearLocalData();
+
+    }
+
     public LiveData<List<Place>> getPlacesData() {
         return placesData;
     }

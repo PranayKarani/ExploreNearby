@@ -133,7 +133,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
                 .append("client_id=").append(C.FS_CLIENT_ID).append("&")
                 .append("client_secret=").append(C.FS_CLIENT_SECRET).append("&")
                 .append("v=20191231&")
-                .append("limit=10&")
+                .append("limit=20&")
                 .append("intent=checkin&")
                 .append("near=bangalore&");
 

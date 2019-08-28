@@ -5,12 +5,18 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
 
-	<androidx.recyclerview.widget.RecyclerView
-		android:id="@+id/place_list"
+	<androidx.constraintlayout.widget.ConstraintLayout
 		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-		tools:listitem="@layout/x_place_item"
-		tools:itemCount="10"
-		/>
+		android:layout_height="match_parent">
+
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/place_list"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+			tools:listitem="@layout/x_place_item"
+			tools:itemCount="10"
+			/>
+
+	</androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

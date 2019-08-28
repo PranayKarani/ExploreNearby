@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+	  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+	<item
+		android:id="@+id/action_search"
+		android:icon="@drawable/search_icon"
+		android:title="Search"
+		app:actionViewClass="androidx.appcompat.widget.SearchView"
+		app:showAsAction="always|collapseActionView"
+		/>
+	<item
+		android:title="Offline Only"
+		android:id="@+id/offline_only"
+		android:checkable="true"
+		android:visible="true"
+		app:showAsAction="never"/>
+	<item
+		android:title="Clear Cache"
+		android:id="@+id/clear_data"
+		app:showAsAction="never"/>
+
+
+</menu>
