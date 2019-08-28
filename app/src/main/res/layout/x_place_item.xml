@@ -11,14 +11,53 @@
 
 		<TextView
 			android:text="TextView"
-			android:layout_width="wrap_content"
+			android:layout_width="0dp"
 			android:layout_height="wrap_content"
 			android:id="@+id/placeName"
 			app:layout_constraintTop_toTopOf="parent"
 			android:layout_marginTop="16dp"
+			android:textSize="18sp"
+			android:layout_marginEnd="16dp"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toEndOf="@+id/imageView"
+			android:layout_marginStart="16dp"/>
+
+		<TextView
+			android:text="TextView"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:id="@+id/shortAddress"
+			app:layout_constraintTop_toBottomOf="@+id/placeName"
+			android:layout_marginBottom="8dp"
+			app:layout_constraintBottom_toBottomOf="parent"
+			android:textSize="10sp"
+			android:layout_marginEnd="16dp"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="@+id/placeName"/>
+
+		<TextView
+			android:text="13 km"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:id="@+id/distance"
+			android:textSize="10sp"
+			android:layout_alignParentEnd="true"
+			android:layout_alignParentStart="true"
+			app:layout_constraintStart_toStartOf="@+id/imageView"
+			app:layout_constraintTop_toBottomOf="@+id/imageView"
+			app:layout_constraintEnd_toEndOf="@+id/imageView"
+			android:layout_marginBottom="8dp"
+			app:layout_constraintBottom_toBottomOf="parent"/>
+
+		<ImageView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			app:srcCompat="@drawable/place_pin"
+			android:id="@+id/imageView"
+			app:layout_constraintTop_toTopOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			android:layout_marginStart="16dp"
-			android:layout_marginBottom="16dp"
 			app:layout_constraintBottom_toBottomOf="parent"/>
+
 	</androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

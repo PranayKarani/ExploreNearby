@@ -13,7 +13,7 @@ import com.yuluassignment.repos.PlacesRepo;
 
 import java.util.List;
 
-@Database(entities = {Place.class}, version = 1)
+@Database(entities = {Place.class}, version = 2)
 public abstract class LocalDatabase extends RoomDatabase {
 
     private static LocalDatabase db;
@@ -21,7 +21,7 @@ public abstract class LocalDatabase extends RoomDatabase {
     public static LocalDatabase get() {
 
         if (db == null) {
-            db = Room.databaseBuilder(MyApp.get(), LocalDatabase.class, "database").build();
+            db = Room.databaseBuilder(MyApp.get(), LocalDatabase.class, "database").fallbackToDestructiveMigration().build();
         }
         return db;
 

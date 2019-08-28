@@ -3,9 +3,9 @@ package com.yuluassignment.repos;
 import android.util.Log;
 import com.yuluassignment.C;
 import com.yuluassignment.entities.Place;
+import com.yuluassignment.entities.SimpleLocation;
 import com.yuluassignment.misc.NetworkManager;
 import com.yuluassignment.misc.Prefs;
-import com.yuluassignment.misc.SharedPrefs;
 import com.yuluassignment.repos.database.LocalDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,6 +20,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     private        NetworkManager      nm;
     private        LocalDatabase       db;
     private        PlacesFetchListener listener;
+    private        SimpleLocation      location;
 
     private PlacesRepo() {
 
@@ -35,8 +36,8 @@ public class PlacesRepo implements NetworkManager.RequestListener {
         return repo;
     }
 
-    public void getPlacesFor(String query, PlacesFetchListener listener) {
-
+    public void getPlacesFor(String query, SimpleLocation location, PlacesFetchListener listener) {
+        this.location = location;
         this.listener = listener;
         if (!nm.connectedToInternet() || Prefs.offline) {
             db.findPlacesByName(query, listener);
@@ -96,33 +97,36 @@ public class PlacesRepo implements NetworkManager.RequestListener {
         if (locationObject != null) {
             place.lat = locationObject.optDouble("lat");
             place.lng = locationObject.optDouble("lng");
+            place.distance = locationObject.optDouble("distance");
 
             JSONArray addressArray = locationObject.optJSONArray("formattedAddress");
             if (addressArray != null) {
-                StringBuilder address  = new StringBuilder();
-                StringBuilder shortAdd = new StringBuilder();
-                for (int i = 0; i < addressArray.length(); i++) {
+                StringBuilder address = new StringBuilder();
+                int           arrLen  = addressArray.length();
+                for (int i = 0; i < arrLen; i++) {
                     String value = addressArray.optString(i);
+                    if (i != 0) {
+                        address.append(", ");
+                    } else {
+                        place.shortAddress = value;
+                    }
                     address.append(value);
-                    if (i != addressArray.length() - 1) {
-                        address.append(",");
-                    }
-                    if (i < 2) {
-                        shortAdd.append(value);
-                        if (i != 1) {
-                            shortAdd.append(",");
-                        }
-                    }
+
                 }
 
                 place.fullAddress = address.toString();
-                place.shortAddress = shortAdd.toString();
             }
         }
 
-        JSONObject categoryObject = jo.optJSONObject("categories");
-        if (categoryObject != null) {
-            place.categoryName = categoryObject.optString("name");
+        JSONArray categoryArray = jo.optJSONArray("categories");
+        if (categoryArray != null) {
+            if (categoryArray.length() > 0) {
+                try {
+                    place.categoryName = categoryArray.optJSONObject(0).optString("name");
+                } catch (Exception ignore) {
+
+                }
+            }
         }
 
         return place;
@@ -131,8 +135,8 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     private String getRequestUrl(String query) {
 
         StringBuilder builder = new StringBuilder();
-        float         lat     = SharedPrefs.get(C.sp_last_lat);
-        float         lng     = SharedPrefs.get(C.sp_last_long);
+        float         lat     = location.lat;
+        float         lng     = location.lng;
         String        location;
         if (lat == -1 || lng == -1) {
             location = "near=bangalore";

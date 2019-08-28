@@ -6,5 +6,5 @@
 	android:layout_height="match_parent"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	android:id="@+id/map_fragment"
-	app:cameraZoom="10"
+	app:cameraZoom="13"
 	android:name="com.google.android.gms.maps.SupportMapFragment"/>

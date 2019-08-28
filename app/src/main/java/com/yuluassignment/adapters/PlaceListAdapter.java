@@ -10,15 +10,21 @@ import com.yuluassignment.R;
 import com.yuluassignment.databinding.XPlaceItemBinding;
 import com.yuluassignment.entities.Place;
 
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceItemViewHolder> {
 
-    private Context     context;
-    private List<Place> places;
+    private Context                context;
+    private List<Place>            places;
+    private PlaceSelectionListener listener;
 
     public PlaceListAdapter(Context context) {
         this.context = context;
+    }
+
+    public void setPlaceSelectionListener(PlaceSelectionListener listener) {
+        this.listener = listener;
     }
 
     public void setPlaces(List<Place> places) {
@@ -37,8 +43,10 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     public void onBindViewHolder(@NonNull PlaceItemViewHolder holder, int position) {
 
         Place place = places.get(position);
-
         holder.setPlace(place);
+        if (listener != null) {
+            holder.itemView.setOnClickListener(v -> listener.onPlaceSelect(place));
+        }
 
     }
 
@@ -50,9 +58,16 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
         return places.size();
     }
 
+    public interface PlaceSelectionListener {
+
+        void onPlaceSelect(Place place);
+
+    }
+
     class PlaceItemViewHolder extends RecyclerView.ViewHolder {
 
         XPlaceItemBinding b;
+        DecimalFormat     decimalFormat = new DecimalFormat("#.# km");
 
         public PlaceItemViewHolder(XPlaceItemBinding b) {
             super(b.getRoot());
@@ -61,7 +76,10 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
 
         public void setPlace(Place place) {
             b.placeName.setText(place.name);
+            b.shortAddress.setText(place.shortAddress);
+            b.distance.setText(decimalFormat.format(place.distance / 1000));
         }
 
     }
+
 }

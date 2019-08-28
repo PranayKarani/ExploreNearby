@@ -13,6 +13,7 @@ public class Place {
     public String name;
     public String categoryName;
     public double lat, lng;
+    public double distance;
     public String shortAddress, fullAddress;
 
     @NonNull

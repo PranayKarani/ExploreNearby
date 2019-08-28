@@ -29,12 +29,6 @@
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintBottom_toBottomOf="parent">
-
-			<fragment
-				android:name="com.yuluassignment.views.PlacesListFragment"
-				android:id="@+id/list_fragment"
-				android:layout_width="match_parent"
-				android:layout_height="match_parent"/>
 		</FrameLayout>
 
 		<FrameLayout
@@ -45,13 +39,6 @@
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintBottom_toBottomOf="parent">
-
-			<fragment
-				android:name="com.yuluassignment.views.MapViewFragment"
-				android:id="@+id/map_fragment"
-				android:layout_width="match_parent"
-				android:layout_height="match_parent"/>
-
 		</FrameLayout>
 
 		<com.google.android.material.floatingactionbutton.FloatingActionButton

@@ -15,10 +15,14 @@ import com.yuluassignment.adapters.PlaceListAdapter;
 import com.yuluassignment.databinding.FragmentPlacesListBinding;
 import com.yuluassignment.viewmodels.PlacesViewModel;
 
-public class PlacesListFragment extends Fragment {
+import java.text.DecimalFormat;
 
-    private PlacesViewModel  viewModel;
-    private PlaceListAdapter adapter;
+public class PlacesListFragment extends Fragment implements HomeActivity.SearchCloseListener {
+
+    private FragmentPlacesListBinding b;
+    private PlacesViewModel           viewModel;
+    private PlaceListAdapter          adapter;
+
     public PlacesListFragment() {
         // Required empty public constructor
     }
@@ -28,24 +32,47 @@ public class PlacesListFragment extends Fragment {
         super.onCreate(savedInstanceState);
         viewModel = ViewModelProviders.of(getActivity()).get(PlacesViewModel.class);
         adapter = new PlaceListAdapter(getContext());
+        final DecimalFormat decimalFormat = new DecimalFormat("#.### km");
+        adapter.setPlaceSelectionListener(place -> {
+
+            String details =
+                    "Name: " + place.name + "\n\n" +
+                            "Category: " + place.categoryName + "\n\n" +
+                            "Full Address: " + place.fullAddress + "\n\n" +
+                            "Distance: " + decimalFormat.format(place.distance / 1000);
+            ((HomeActivity) getActivity()).showAlert(true, details, (dialog, which) -> dialog.dismiss());
+
+        });
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        FragmentPlacesListBinding b = DataBindingUtil.inflate(inflater, R.layout.fragment_places_list, container, false);
+        b = DataBindingUtil.inflate(inflater, R.layout.fragment_places_list, container, false);
 
         b.placeList.setAdapter(adapter);
         viewModel.getPlacesData().observe(this, places -> {
 
+            adapter.setPlaces(places);
+
+            if (HomeActivity.showingMapView) {
+                return;
+            }
             if (places.isEmpty()) {
                 Toast.makeText(getContext(), "No places found :(", Toast.LENGTH_SHORT).show();
+                b.img.setVisibility(View.VISIBLE);
+            } else {
+                b.img.setVisibility(View.GONE);
             }
-            adapter.setPlaces(places);
 
         });
 
         return b.getRoot();
     }
 
+    @Override
+    public void onSearchClose() {
+        adapter.setPlaces(null);
+        b.img.setVisibility(View.VISIBLE);
+    }
 }

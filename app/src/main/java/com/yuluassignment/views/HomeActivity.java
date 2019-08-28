@@ -50,25 +50,25 @@ public class HomeActivity extends AppCompatActivity {
     private PlacesListFragment listFragment;
     private MapViewFragment    mapViewFragment;
 
-    private SimpleLocation             location;
-    private Set<LocationFetchListener> locationFetchListeners;
     private Set<SearchCloseListener>   searchCloseListeners;
 
-    private boolean showingMapView = false;
+    public static boolean showingMapView = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         updateStatusBar(android.R.color.white);
 
-        locationFetchListeners = new HashSet<>();
         searchCloseListeners = new HashSet<>();
         loadSettings();
 
         b = DataBindingUtil.setContentView(this, R.layout.activity_home);
         setSupportActionBar(b.toolbar);
-        getSupportActionBar().setTitle("Search a place");
-        b.toolbar.setTitle(null);
+        try {
+            getSupportActionBar().setTitle("Explore nearby");
+        } catch (NullPointerException e) {
+            b.toolbar.setTitle(null);
+        }
 
         viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
 
@@ -78,7 +78,7 @@ public class HomeActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction().add(R.id.list_fragment_container, listFragment).commit();
         getSupportFragmentManager().beginTransaction().add(R.id.map_fragment_container, mapViewFragment).commit();
 
-        locationFetchListeners.add(mapViewFragment);
+        searchCloseListeners.add(listFragment);
         searchCloseListeners.add(mapViewFragment);
 
         if (Prefs.mapView) {
@@ -136,13 +136,12 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
         SearchView sv = (SearchView) searchItem.getActionView();
-        sv.setQueryHint("what do you want to search for?");
+        sv.setQueryHint("");
         sv.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 hideKeyboard(b.getRoot());
                 viewModel.getPlacesFor(query);
-                b.viewToggleBtn.setVisibility(View.VISIBLE);
                 return true;
             }
 
@@ -180,7 +179,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void loadSettings() {
-        Prefs.offline = SharedPrefs.get(sp_offline_only, true);
+        Prefs.offline = SharedPrefs.get(sp_offline_only, false);
         Prefs.mapView = SharedPrefs.get(sp_open_map_view, false);
     }
 
@@ -217,6 +216,8 @@ public class HomeActivity extends AppCompatActivity {
 
                 });
 
+            } else {
+                checkForLocationSettings();
             }
 
         }
@@ -294,18 +295,18 @@ public class HomeActivity extends AppCompatActivity {
         client.getLastLocation().addOnSuccessListener(location -> {
 
             if (location != null) {
-                informLocationListeners(SimpleLocation.fromLocation(location));
+                setSimpleLocation(SimpleLocation.fromLocation(location));
             } else {
                 client.requestLocationUpdates(getLocationRequest(), new LocationCallback() {
                     @Override
                     public void onLocationResult(LocationResult locationResult) {
                         if (locationResult != null) {
-                            informLocationListeners(SimpleLocation.fromLocation(locationResult.getLastLocation()));
+                            setSimpleLocation(SimpleLocation.fromLocation(locationResult.getLastLocation()));
                         } else {
 
                             SimpleLocation lastLocation = checkForLastSavedLocation();
                             if (lastLocation != null) {
-                                informLocationListeners(lastLocation);
+                                setSimpleLocation(lastLocation);
                             }
 
                         }
@@ -332,17 +333,18 @@ public class HomeActivity extends AppCompatActivity {
 
     }
 
-    // saves and
-    private void informLocationListeners(SimpleLocation location) {
-        this.location = location;
+    // saves location and set viewmodel data
+    private void setSimpleLocation(SimpleLocation location) {
         SharedPrefs.put(sp_last_lat, location.lat);
         SharedPrefs.put(sp_last_long, location.lng);
-        for (LocationFetchListener listener : locationFetchListeners) {
-            listener.locationFetched(location);
-        }
+        viewModel.setLocation(location);
     }
 
-    private void showAlert(final boolean cancelable, final String message, final DialogInterface.OnClickListener clickListener) {
+    void showToggleButton(boolean show) {
+        b.viewToggleBtn.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    void showAlert(final boolean cancelable, final String message, final DialogInterface.OnClickListener clickListener) {
 
         new AlertDialog.Builder(this)
                 .setMessage(message)
@@ -351,10 +353,6 @@ public class HomeActivity extends AppCompatActivity {
                 .create()
                 .show();
 
-    }
-
-    public interface LocationFetchListener {
-        void locationFetched(SimpleLocation location);
     }
 
     public interface SearchCloseListener {

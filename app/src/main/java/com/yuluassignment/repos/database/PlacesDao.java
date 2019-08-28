@@ -11,7 +11,7 @@ import java.util.List;
 @Dao
 public interface PlacesDao {
 
-    @Query("SELECT * FROM Place WHERE name LIKE :name")
+    @Query("SELECT * FROM Place WHERE name LIKE :name ORDER BY distance ASC LIMIT 20 ")
     List<Place> findPlaces(String name);
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
