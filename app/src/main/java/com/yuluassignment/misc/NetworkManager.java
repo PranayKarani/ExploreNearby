@@ -1,5 +1,8 @@
 package com.yuluassignment.misc;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.util.Log;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
@@ -33,17 +36,17 @@ public class NetworkManager {
                     Log.i(C.TAG, response);
                     try {
                         JSONObject jsonObject = new JSONObject(response).getJSONObject("response");
-                        listener.onSuccess(jsonObject);
+                        listener.onRequestSuccess(jsonObject);
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        listener.onFail(1, "Error parsing response");
+                        listener.onRequestFail(1, "Error parsing response");
                     }
 
                 },
                 error -> {
                     String errMess = String.valueOf(error);
                     Log.e(C.TAG, errMess);
-                    listener.onFail(1, "Something went wrong: " + errMess);
+                    listener.onRequestFail(1, "Something went wrong: " + errMess);
                 }
         );
 
@@ -51,11 +54,18 @@ public class NetworkManager {
 
     }
 
+    public boolean connectedToInternet() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) MyApp.get().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
     public interface RequestListener {
 
-        void onSuccess(JSONObject jsonResponse);
+        void onRequestSuccess(JSONObject jsonResponse);
 
-        void onFail(int err, String message);
+        void onRequestFail(int err, String message);
 
     }
 

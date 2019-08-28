@@ -1,28 +1,25 @@
 package com.yuluassignment.views;
 
 import android.os.Bundle;
-import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
-import com.yuluassignment.C;
+import androidx.lifecycle.ViewModelProviders;
 import com.yuluassignment.R;
-import com.yuluassignment.entities.Place;
-import com.yuluassignment.repos.PlacesRepo;
+import com.yuluassignment.databinding.ActivityHomeBinding;
+import com.yuluassignment.viewmodels.PlacesViewModel;
 
 public class HomeActivity extends AppCompatActivity {
 
+    private ActivityHomeBinding b;
+    private PlacesViewModel     viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_maps);
+        setContentView(R.layout.activity_home);
 
-        PlacesRepo.get().getPlacesFor("coffee", places -> {
+        viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
+        viewModel.getPlacesFor("flipkart");
 
-            for (Place place : places) {
-                Log.i(C.TAG, place.toString());
-            }
-
-        });
 
     }
 

@@ -4,20 +4,26 @@ import android.util.Log;
 import com.yuluassignment.C;
 import com.yuluassignment.entities.Place;
 import com.yuluassignment.misc.NetworkManager;
+import com.yuluassignment.misc.Settings;
+import com.yuluassignment.repos.database.LocalDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class PlacesRepo {
+public class PlacesRepo implements NetworkManager.RequestListener {
 
-    private static PlacesRepo     repo;
-    private        NetworkManager nm;
+    private static PlacesRepo          repo;
+    private        NetworkManager      nm;
+    private        LocalDatabase       db;
+    private        PlacesFetchListener listener;
 
     private PlacesRepo() {
 
         nm = NetworkManager.get();
+        db = LocalDatabase.get();
 
     }
 
@@ -30,35 +36,51 @@ public class PlacesRepo {
 
     public void getPlacesFor(String query, PlacesFetchListener listener) {
 
-        nm.makeGETRequest(getRequestUrl(query), new NetworkManager.RequestListener() {
-            @Override
-            public void onSuccess(JSONObject jsonResponse) {
+        this.listener = listener;
+        if (!nm.connectedToInternet() || Settings.offline_only) {
+            db.findPlacesByName(query, listener);
+        } else {
+            nm.makeGETRequest(getRequestUrl(query), this);
+        }
 
-                try {
+    }
 
-                    ArrayList<Place> places     = new ArrayList<>();
-                    JSONArray        venueArray = jsonResponse.getJSONArray("venues");
+    public void clearLocalData() {
 
-                    for (int i = 0; i < venueArray.length(); i++) {
-                        JSONObject jo = venueArray.getJSONObject(i);
-                        places.add(extractFromJSON(jo));
-                    }
+        // TODO clear local database
 
-                    listener.onPlacesFetchSuccess(places);
+    }
 
+    @Override
+    public void onRequestSuccess(JSONObject jsonResponse) {
 
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                    listener.onPlaceFetchFail("Something went wrong parsing response");
-                }
+        try {
 
+            ArrayList<Place> places     = new ArrayList<>();
+            JSONArray        venueArray = jsonResponse.getJSONArray("venues");
+
+            for (int i = 0; i < venueArray.length(); i++) {
+                JSONObject jo = venueArray.getJSONObject(i);
+                places.add(extractFromJSON(jo));
             }
 
-            @Override
-            public void onFail(int err, String message) {
-
+            if (listener != null) {
+                listener.onPlacesFetchSuccess(places);
             }
-        });
+            db.addPlaces(places);
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            if (listener != null) {
+                listener.onPlaceFetchFail("Something went wrong parsing response");
+            }
+        }
+
+    }
+
+    @Override
+    public void onRequestFail(int err, String message) {
 
     }
 
@@ -112,6 +134,7 @@ public class PlacesRepo {
                 .append("client_secret=").append(C.FS_CLIENT_SECRET).append("&")
                 .append("v=20191231&")
                 .append("limit=10&")
+                .append("intent=checkin&")
                 .append("near=bangalore&");
 
         if (query != null) {
@@ -124,7 +147,7 @@ public class PlacesRepo {
 
     public interface PlacesFetchListener {
 
-        void onPlacesFetchSuccess(ArrayList<Place> places);
+        void onPlacesFetchSuccess(List<Place> places);
 
         default void onPlaceFetchFail(String message) {
             Log.e(C.TAG, "Something went wrong");
