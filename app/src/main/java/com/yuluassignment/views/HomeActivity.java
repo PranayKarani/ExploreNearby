@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -47,12 +48,9 @@ public class HomeActivity extends AppCompatActivity {
     private ActivityHomeBinding b;
     private PlacesViewModel     viewModel;
 
-    private PlacesListFragment listFragment;
-    private MapViewFragment    mapViewFragment;
-
     private Set<SearchCloseListener>   searchCloseListeners;
 
-    public static boolean showingMapView = false;
+    static boolean showingMapView = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,8 +70,8 @@ public class HomeActivity extends AppCompatActivity {
 
         viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
 
-        listFragment = new PlacesListFragment();
-        mapViewFragment = new MapViewFragment();
+        PlacesListFragment listFragment    = new PlacesListFragment();
+        MapViewFragment    mapViewFragment = new MapViewFragment();
 
         getSupportFragmentManager().beginTransaction().add(R.id.list_fragment_container, listFragment).commit();
         getSupportFragmentManager().beginTransaction().add(R.id.map_fragment_container, mapViewFragment).commit();
@@ -137,6 +135,7 @@ public class HomeActivity extends AppCompatActivity {
         });
         SearchView sv = (SearchView) searchItem.getActionView();
         sv.setQueryHint("");
+        sv.findViewById(androidx.appcompat.R.id.search_plate).setBackgroundColor(Color.TRANSPARENT);
         sv.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
