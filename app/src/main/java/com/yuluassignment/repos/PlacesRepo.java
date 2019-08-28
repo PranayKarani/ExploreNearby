@@ -37,7 +37,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     public void getPlacesFor(String query, PlacesFetchListener listener) {
 
         this.listener = listener;
-        if (!nm.connectedToInternet() || Settings.offline_only) {
+        if (!nm.connectedToInternet() || Settings.offline) {
             db.findPlacesByName(query, listener);
         } else {
             nm.makeGETRequest(getRequestUrl(query), this);

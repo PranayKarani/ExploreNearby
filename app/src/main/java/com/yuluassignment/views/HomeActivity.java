@@ -13,7 +13,6 @@ import androidx.appcompat.widget.SearchView;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProviders;
 import com.yuluassignment.R;
 import com.yuluassignment.databinding.ActivityHomeBinding;
@@ -23,8 +22,16 @@ import com.yuluassignment.viewmodels.PlacesViewModel;
 
 public class HomeActivity extends AppCompatActivity {
 
+    final String sp_offline_only  = "offline";
+    final String sp_open_map_view = "mapView";
+
     private ActivityHomeBinding b;
     private PlacesViewModel     viewModel;
+
+    private PlacesListFragment listFragment;
+    private MapViewFragment    mapViewFragment;
+
+    private boolean showingMapView = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,9 +45,37 @@ public class HomeActivity extends AppCompatActivity {
 
         viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
 
-        PlacesListFragment listFragment = new PlacesListFragment();
-        loadFragment(listFragment);
+        listFragment = new PlacesListFragment();
+        mapViewFragment = new MapViewFragment();
 
+        if (Settings.mapView) {
+            showMap();
+        } else {
+            showList();
+        }
+
+    }
+
+    public void toggleView(View view) {
+
+        if (showingMapView) {
+            showList();
+        } else {
+            showMap();
+        }
+
+    }
+
+    private void showMap() {
+        showingMapView = true;
+        showFragment(mapViewFragment);
+        b.viewToggleBtn.setImageDrawable(getResources().getDrawable(R.drawable.list_icon));
+    }
+
+    private void showList() {
+        showingMapView = false;
+        showFragment(listFragment);
+        b.viewToggleBtn.setImageDrawable(getResources().getDrawable(R.drawable.map_icon));
     }
 
     @Override
@@ -65,7 +100,8 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        menu.findItem(R.id.offline_only).setChecked(Settings.offline_only);
+        menu.findItem(R.id.offline).setChecked(Settings.offline);
+        menu.findItem(R.id.map_view).setChecked(Settings.mapView);
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -76,26 +112,31 @@ public class HomeActivity extends AppCompatActivity {
             case R.id.clear_data:
                 viewModel.clearData();
                 return true;
-            case R.id.offline_only:
-                Settings.offline_only = !Settings.offline_only;
-                item.setChecked(Settings.offline_only);
-                SharedPrefs.writeData("offline_only", Settings.offline_only);
+            case R.id.offline:
+                Settings.offline = !Settings.offline;
+                item.setChecked(Settings.offline);
+                SharedPrefs.writeData(sp_offline_only, Settings.offline);
+                return true;
+            case R.id.map_view:
+                Settings.mapView = !Settings.mapView;
+                item.setChecked(Settings.mapView);
+                SharedPrefs.writeData(sp_open_map_view, Settings.mapView);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-    private void loadFragment(Fragment fragment) {
-
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-        fragmentTransaction.add(R.id.fragment_container, fragment);
-        fragmentTransaction.commit();
-
+    private void showFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit();
     }
 
     private void loadSettings() {
-        Settings.offline_only = SharedPrefs.readData("offline_only", true);
+        Settings.offline = SharedPrefs.readData(sp_offline_only, true);
+        Settings.mapView = SharedPrefs.readData(sp_open_map_view, false);
     }
 
     private void updateStatusBar(int color) {

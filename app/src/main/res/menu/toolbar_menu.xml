@@ -11,7 +11,13 @@
 		/>
 	<item
 		android:title="Offline Only"
-		android:id="@+id/offline_only"
+		android:id="@+id/offline"
+		android:checkable="true"
+		android:visible="true"
+		app:showAsAction="never"/>
+	<item
+		android:title="Open with Map"
+		android:id="@+id/map_view"
 		android:checkable="true"
 		android:visible="true"
 		app:showAsAction="never"/>
