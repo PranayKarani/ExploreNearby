@@ -1,7 +1,9 @@
 package com.yuluassignment.repos;
 
 import android.util.Log;
+import android.widget.Toast;
 import com.yuluassignment.C;
+import com.yuluassignment.MyApp;
 import com.yuluassignment.entities.Place;
 import com.yuluassignment.entities.SimpleLocation;
 import com.yuluassignment.misc.NetworkManager;
@@ -15,6 +17,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This repo acts as single point of access to location search and data
+ */
 public class PlacesRepo implements NetworkManager.RequestListener {
 
     private static PlacesRepo          repo;
@@ -37,12 +42,21 @@ public class PlacesRepo implements NetworkManager.RequestListener {
         return repo;
     }
 
+    /**
+     * Gets places for query from API endpoint or local database
+     *
+     * @param query
+     * @param location
+     * @param listener
+     */
     public void getPlacesFor(String query, SimpleLocation location, PlacesFetchListener listener) {
         this.location = location;
         this.listener = listener;
+
+        // if offline or user prefers offline, get places from local database
         if (!nm.connectedToInternet() || Prefs.offline) {
             db.findPlacesByName(query, listener);
-        } else {
+        } else { // else fetch from API endpoint
             String url = getRequestUrl(query);
             Log.i(C.TAG, "url: " + url);
             nm.makeGETRequest(url, this);
@@ -56,6 +70,11 @@ public class PlacesRepo implements NetworkManager.RequestListener {
 
     }
 
+    /**
+     * Informs listener upon successfully fetching the data or any error parsing response
+     * Also inserts the data into local database for offline purposes
+     * @param jsonResponse
+     */
     @Override
     public void onRequestSuccess(JSONObject jsonResponse) {
 
@@ -64,6 +83,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
             ArrayList<Place> places     = new ArrayList<>();
             JSONArray        venueArray = jsonResponse.getJSONArray("venues");
 
+            // extract Place object from json response and put in array
             for (int i = 0; i < venueArray.length(); i++) {
                 JSONObject jo = venueArray.getJSONObject(i);
                 places.add(extractFromJSON(jo));
@@ -87,8 +107,15 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     @Override
     public void onRequestFail(int err, String message) {
 
+        Toast.makeText(MyApp.get(), "Something went wrong fetching data from API endpoint. " + message, Toast.LENGTH_LONG).show();
+
     }
 
+    /**
+     * Extracts Place object from JSONObject
+     * @param jo
+     * @return
+     */
     private Place extractFromJSON(JSONObject jo) {
         Place place = new Place();
         place.id = jo.optString("id");
@@ -133,11 +160,17 @@ public class PlacesRepo implements NetworkManager.RequestListener {
         return place;
     }
 
+    /**
+     * Constructs url for the request
+     * @param query
+     * @return
+     */
     private String getRequestUrl(String query) {
 
         StringBuilder builder = new StringBuilder();
-        float         lat     = -1;
-        float         lng     = -1;
+        float         lat, lng;
+
+        // check for location, if not found, check for locally saved location
         if (location != null) {
             lat = location.lat;
             lng = location.lng;
@@ -146,6 +179,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
             lng = SharedPrefs.get(C.sp_last_long);
         }
         String locationStr;
+        // if even that is not found, search near Bangalore
         if (lat == -1 || lng == -1) {
             locationStr = "near=Bengaluru";
         } else {
@@ -168,6 +202,9 @@ public class PlacesRepo implements NetworkManager.RequestListener {
 
     }
 
+    /**
+     * Interface for class which wants to listen for Places fetch agnostic of source
+     */
     public interface PlacesFetchListener {
 
         void onPlacesFetchSuccess(List<Place> places);

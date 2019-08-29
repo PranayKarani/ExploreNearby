@@ -12,6 +12,9 @@ import com.yuluassignment.MyApp;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Class for handling any network operation like checking internet, making requests
+ */
 public class NetworkManager {
 
     private static NetworkManager manager;
@@ -46,7 +49,7 @@ public class NetworkManager {
                 error -> {
                     String errMess = String.valueOf(error);
                     Log.e(C.TAG, errMess);
-                    listener.onRequestFail(1, "Something went wrong: " + errMess);
+                    listener.onRequestFail(1, errMess);
                 }
         );
 

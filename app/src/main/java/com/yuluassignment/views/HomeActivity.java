@@ -10,7 +10,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,18 +55,16 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        updateStatusBar(android.R.color.white);
-
-        searchCloseListeners = new HashSet<>();
-        loadSettings();
-
         b = DataBindingUtil.setContentView(this, R.layout.activity_home);
+        updateStatusBar(android.R.color.white);
         setSupportActionBar(b.toolbar);
         try {
             getSupportActionBar().setTitle("Explore nearby");
         } catch (NullPointerException e) {
             b.toolbar.setTitle(null);
         }
+
+        loadSettings();
 
         viewModel = ViewModelProviders.of(this).get(PlacesViewModel.class);
 
@@ -77,6 +74,7 @@ public class HomeActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction().add(R.id.list_fragment_container, listFragment).commit();
         getSupportFragmentManager().beginTransaction().add(R.id.map_fragment_container, mapViewFragment).commit();
 
+        searchCloseListeners = new HashSet<>();
         searchCloseListeners.add(listFragment);
         searchCloseListeners.add(mapViewFragment);
 
@@ -86,7 +84,6 @@ public class HomeActivity extends AppCompatActivity {
             showList();
         }
 
-        // check this if no location found
         checkForLocationPersmission();
 
     }
@@ -119,6 +116,16 @@ public class HomeActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.toolbar_menu, menu);
 
+        // setup search view
+        setupSearchView(menu);
+
+        menu.findItem(R.id.offline).setChecked(Prefs.offline);
+        menu.findItem(R.id.map_view).setChecked(Prefs.mapView);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    private void setupSearchView(Menu menu) {
         MenuItem searchItem = menu.findItem(R.id.action_search);
         searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
             @Override
@@ -150,11 +157,6 @@ public class HomeActivity extends AppCompatActivity {
                 return false;
             }
         });
-
-        menu.findItem(R.id.offline).setChecked(Prefs.offline);
-        menu.findItem(R.id.map_view).setChecked(Prefs.mapView);
-
-        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -183,29 +185,11 @@ public class HomeActivity extends AppCompatActivity {
         Prefs.mapView = SharedPrefs.get(sp_open_map_view, false);
     }
 
-    private void updateStatusBar(int color) {
-
-        getWindow().setStatusBarColor(ContextCompat.getColor(this, color));
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
-
-    }
-
-    private void hideKeyboard(View view) {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null) {
-            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-        }
-
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
+        // if permission is granted, check for device location setting
         if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
 
             if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
@@ -227,6 +211,8 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        // if setting is turned on, get user location
         if (requestCode == REQUEST_CHECK_SETTINGS) {
             switch (resultCode) {
                 case Activity.RESULT_OK:
@@ -241,6 +227,9 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Check if location permission is granted. If not ask else check for location settings
+     */
     private void checkForLocationPersmission() {
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -264,15 +253,13 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     /**
-     * Checks for location setting. If on, call getUserLocation else shows a turn on location dialog
+     * Checks for device location setting. If on, gets user location data else shows a turn on location dialog
      */
     private void checkForLocationSettings() {
 
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(getLocationRequest());
         Task<LocationSettingsResponse>  task    = LocationServices.getSettingsClient(this).checkLocationSettings(builder.build());
-        task.addOnSuccessListener(this, locationSettingsResponse -> {
-            getUserLocation();
-        });
+        task.addOnSuccessListener(this, locationSettingsResponse -> getUserLocation());
         task.addOnFailureListener(this, e -> {
             if (e instanceof ResolvableApiException) {
                 try {
@@ -286,8 +273,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     /**
-     * Gets user location and informs listeners.
-     * If location could not be accessed get the last saved location
+     * Gets user location and sets SimpleLocation data.
      */
     private void getUserLocation() {
 
@@ -300,6 +286,8 @@ public class HomeActivity extends AppCompatActivity {
                 client.requestLocationUpdates(getLocationRequest(), new LocationCallback() {
                     @Override
                     public void onLocationResult(LocationResult locationResult) {
+
+                        // If location could not be accessed get the last saved location
                         if (locationResult != null) {
                             setSimpleLocation(SimpleLocation.fromLocation(locationResult.getLastLocation()));
                         } else {
@@ -316,10 +304,20 @@ public class HomeActivity extends AppCompatActivity {
             }
 
         }).addOnFailureListener(e -> {
-            Log.e(C.TAG, e.getMessage());
+
+            // If check for last saved location in case of error
+            SimpleLocation lastLocation = checkForLastSavedLocation();
+            if (lastLocation != null) {
+                setSimpleLocation(lastLocation);
+            }
         });
     }
 
+    /**
+     * get location saved in SharedPrefs
+     *
+     * @return SimpleLocation
+     */
     private SimpleLocation checkForLastSavedLocation() {
 
         float lat = SharedPrefs.get(sp_last_lat);
@@ -333,7 +331,9 @@ public class HomeActivity extends AppCompatActivity {
 
     }
 
-    // saves location and set viewmodel data
+    /**
+     * saves location data locally and set viewmodel data
+     */
     private void setSimpleLocation(SimpleLocation location) {
         SharedPrefs.put(sp_last_lat, location.lat);
         SharedPrefs.put(sp_last_long, location.lng);
@@ -352,6 +352,25 @@ public class HomeActivity extends AppCompatActivity {
                 .setCancelable(cancelable)
                 .create()
                 .show();
+
+    }
+
+    private void updateStatusBar(int color) {
+
+        getWindow().setStatusBarColor(ContextCompat.getColor(this, color));
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
 
     }
 

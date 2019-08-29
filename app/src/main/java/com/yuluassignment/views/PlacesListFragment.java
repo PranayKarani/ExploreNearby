@@ -31,8 +31,12 @@ public class PlacesListFragment extends Fragment implements HomeActivity.SearchC
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewModel = ViewModelProviders.of(getActivity()).get(PlacesViewModel.class);
-        adapter = new PlaceListAdapter(getContext());
+
         final DecimalFormat decimalFormat = new DecimalFormat("#.### km");
+
+        // setup list adapter
+        adapter = new PlaceListAdapter(getContext());
+        // listen for place item selection
         adapter.setPlaceSelectionListener(place -> {
 
             String details =
@@ -46,11 +50,12 @@ public class PlacesListFragment extends Fragment implements HomeActivity.SearchC
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         b = DataBindingUtil.inflate(inflater, R.layout.fragment_places_list, container, false);
 
         b.placeList.setAdapter(adapter);
+
+        // observe places data and update adapter upon results
         viewModel.getPlacesData().observe(this, places -> {
 
             adapter.setPlaces(places);

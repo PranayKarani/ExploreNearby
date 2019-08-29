@@ -31,9 +31,6 @@ import com.yuluassignment.viewmodels.PlacesViewModel;
 import java.text.DecimalFormat;
 import java.util.List;
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class MapViewFragment extends Fragment implements OnMapReadyCallback, HomeActivity.SearchCloseListener {
 
     private GoogleMap          map;
@@ -43,41 +40,11 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
     private BitmapDescriptor   userPinIcon, placePinIcon;
     private Handler handler = new Handler();
 
-    public MapViewFragment() {
-        // Required empty public constructor
-    }
-
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewModel = ViewModelProviders.of(getActivity()).get(PlacesViewModel.class);
-        if (location != null) {
-            if (map == null) {
-                mapFragment.getMapAsync(this);
-            } else {
-                locateUser(location);
-            }
-        }
-    }
-
-    private void markPlaces(List<Place> places) {
-
-        if (map != null) {
-            cleanupMap();
-
-            if (location == null && !places.isEmpty()) {
-                this.moveCameraOnPlace(places.get(0));
-            }
-
-            for (Place place : places) {
-
-                addMarker(place);
-
-            }
-
-        }
-
     }
 
     @Override
@@ -89,6 +56,8 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         placePinIcon = getMarkerIconFromDrawable(R.drawable.place_pin);
         mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map_fragment);
         mapFragment.getMapAsync(this);
+
+        // observe search for places and mark them on map upon receiving them
         viewModel.getPlacesData().observe(this, places -> {
 
             markPlaces(places);
@@ -100,6 +69,8 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
             }
 
         });
+
+        // observe location data and locate on map upon getting it
         viewModel.getLocationData().observe(this, simpleLocation -> {
             location = simpleLocation;
             locateUser(simpleLocation);
@@ -112,9 +83,11 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
     public void onMapReady(GoogleMap googleMap) {
 
         final DecimalFormat decimalFormat = new DecimalFormat("#.### km");
-        Log.i(C.TAG, "ready map");
+        Log.i(C.TAG, "map ready");
         map = googleMap;
         map.setOnMarkerClickListener(marker -> {
+
+            // show place details dialog upon selecting marker, and also hide activitie's toggle view button
             Place place = (Place) marker.getTag();
             if (place != null) {
                 ((HomeActivity) getActivity()).showToggleButton(false);
@@ -126,12 +99,23 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
             }
             return false;
         });
+        // show toggle button if select somewhere on the map
         map.setOnMapClickListener(latLng -> {
             ((HomeActivity) getActivity()).showToggleButton(true);
         });
         locateUser(location);
     }
 
+    @Override
+    public void onSearchClose() {
+        cleanupMap();
+    }
+
+    /**
+     * adds a marker and moves camera to given location
+     *
+     * @param location
+     */
     private void locateUser(SimpleLocation location) {
 
         if (location != null) {
@@ -141,9 +125,31 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         }
     }
 
-    private void addMarker(Place place) {
-        LatLng ll = new LatLng(place.lat, place.lng);
-        map.addMarker(new MarkerOptions().position(ll).icon(placePinIcon)).setTag(place);
+    /**
+     * Add markers on map for places
+     *
+     * @param places
+     */
+    private void markPlaces(List<Place> places) {
+
+        if (map != null) {
+            cleanupMap();
+
+            // if location is not set i.e. camera might be looking somewhere else
+            // move it to point at the first place
+            if (location == null && !places.isEmpty()) {
+                moveCameraOnPlace(places.get(0));
+            }
+
+            for (Place place : places) {
+
+                LatLng ll = new LatLng(place.lat, place.lng);
+                map.addMarker(new MarkerOptions().position(ll).icon(placePinIcon)).setTag(place);
+
+            }
+
+        }
+
     }
 
     private void moveCameraOnPlace(Place place) {
@@ -151,17 +157,9 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         map.moveCamera(CameraUpdateFactory.newLatLng(ll));
     }
 
-    @Override
-    public void onStop() {
-        super.onStop();
-        Log.e(C.TAG, "stopped");
-    }
-
-    @Override
-    public void onSearchClose() {
-        cleanupMap();
-    }
-
+    /**
+     * removes all markers except user location
+     */
     private void cleanupMap() {
         if (map != null) {
             map.clear();
