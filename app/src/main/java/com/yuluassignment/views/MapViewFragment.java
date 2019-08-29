@@ -66,6 +66,10 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         if (map != null) {
             cleanupMap();
 
+            if (location == null && !places.isEmpty()) {
+                this.moveCameraOnPlace(places.get(0));
+            }
+
             for (Place place : places) {
 
                 addMarker(place);
@@ -84,6 +88,7 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         userPinIcon = getMarkerIconFromDrawable(R.drawable.user_pin);
         placePinIcon = getMarkerIconFromDrawable(R.drawable.place_pin);
         mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map_fragment);
+        mapFragment.getMapAsync(this);
         viewModel.getPlacesData().observe(this, places -> {
 
             markPlaces(places);
@@ -97,7 +102,7 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
         });
         viewModel.getLocationData().observe(this, simpleLocation -> {
             location = simpleLocation;
-            mapFragment.getMapAsync(this);
+            locateUser(simpleLocation);
         });
 
         return view;
@@ -139,6 +144,11 @@ public class MapViewFragment extends Fragment implements OnMapReadyCallback, Hom
     private void addMarker(Place place) {
         LatLng ll = new LatLng(place.lat, place.lng);
         map.addMarker(new MarkerOptions().position(ll).icon(placePinIcon)).setTag(place);
+    }
+
+    private void moveCameraOnPlace(Place place) {
+        LatLng ll = new LatLng(place.lat, place.lng);
+        map.moveCamera(CameraUpdateFactory.newLatLng(ll));
     }
 
     @Override

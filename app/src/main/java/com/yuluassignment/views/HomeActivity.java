@@ -16,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -232,7 +233,7 @@ public class HomeActivity extends AppCompatActivity {
                     getUserLocation();
                     break;
                 case Activity.RESULT_CANCELED:
-                    checkForLocationSettings();
+                    Toast.makeText(this, "Will show results in Bengaluru", Toast.LENGTH_SHORT).show();
                     break;
                 default:
                     break;

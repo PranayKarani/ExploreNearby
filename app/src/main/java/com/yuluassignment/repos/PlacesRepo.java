@@ -6,6 +6,7 @@ import com.yuluassignment.entities.Place;
 import com.yuluassignment.entities.SimpleLocation;
 import com.yuluassignment.misc.NetworkManager;
 import com.yuluassignment.misc.Prefs;
+import com.yuluassignment.misc.SharedPrefs;
 import com.yuluassignment.repos.database.LocalDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -135,13 +136,20 @@ public class PlacesRepo implements NetworkManager.RequestListener {
     private String getRequestUrl(String query) {
 
         StringBuilder builder = new StringBuilder();
-        float         lat     = location.lat;
-        float         lng     = location.lng;
-        String        location;
-        if (lat == -1 || lng == -1) {
-            location = "near=bangalore";
+        float         lat     = -1;
+        float         lng     = -1;
+        if (location != null) {
+            lat = location.lat;
+            lng = location.lng;
         } else {
-            location = "ll=" + lat + "," + lng;
+            lat = SharedPrefs.get(C.sp_last_lat);
+            lng = SharedPrefs.get(C.sp_last_long);
+        }
+        String locationStr;
+        if (lat == -1 || lng == -1) {
+            locationStr = "near=Bengaluru";
+        } else {
+            locationStr = "ll=" + lat + "," + lng;
         }
 
         builder.append(C.API_SEARCH)
@@ -150,7 +158,7 @@ public class PlacesRepo implements NetworkManager.RequestListener {
                 .append("v=20191231&")
                 .append("limit=20&")
                 .append("intent=checkin&")
-                .append(location);
+                .append(locationStr);
 
         if (query != null) {
             builder.append("&query=").append(query);
