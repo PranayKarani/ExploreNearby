@@ -1,4 +1,4 @@
-# YuluAssignment
+# ExploreNearby
 
 ### Download
 download the release build from [here](https://github.com/PranayKarani/YuluAssignment/blob/master/app/release/app-release.apk). 
